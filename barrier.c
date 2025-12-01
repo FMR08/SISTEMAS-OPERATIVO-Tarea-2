@@ -24,12 +24,12 @@ int barrier_init(barrier_t *b, int N) {
 
 void barrier_wait(barrier_t *b) {
     pthread_mutex_lock(&b->mtx);
-
     int mi_etapa = b->etapa;
+    b->count++;
     if (b->count == b->N) {
         b->etapa++;
         b->count = 0;
-        pthread_cond_broadcast(&b->cond);
+        pthread_cond_broadcast(&b->cond); 
     } else {
         while (mi_etapa == b->etapa) {
             pthread_cond_wait(&b->cond, &b->mtx);

@@ -14,10 +14,10 @@ typedef struct {
 void *worker(void *arg) {
     thread_arg_t *t = (thread_arg_t *)arg;
 
-    srand(time(NULL) ^ (t->id * 1234567));
+    unsigned int seed = (unsigned int)(time(NULL) ^ (t->id * 1234567));
 
     for (int e = 0; e < t->etapas; e++) {
-        int delay_ms = rand() % 100;
+        int delay_ms = (rand_r(&seed) % 400) + 100; 
         usleep(delay_ms * 1000);
 
         printf("[thread %d] esperando en etapa %d\n", t->id, e);
@@ -33,8 +33,8 @@ void *worker(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-    int N = 5;
-    int E = 4;
+    int N = 5; 
+    int E = 4; 
 
     if (argc >= 2) {
         N = atoi(argv[1]);
@@ -44,34 +44,35 @@ int main(int argc, char *argv[]) {
     }
 
     if (N <= 0 || E <= 0) {
-        fprintf(stderr, "Uso: %s [N_hebras] [E_etapas]\n", argv[0]);
-        return EXIT_FAILURE;
+        fprintf(stderr, "Uso: %s [N_hebras > 0] [E_etapas > 0]\n", argv[0]);
+        return 1;
     }
 
-    printf("Ejecutando con N = %d hebras, E = %d etapas\n", N, E);
+    printf("%d hebras y %d etapas\n", N, E);
 
     barrier_t barrera;
     if (barrier_init(&barrera, N) != 0) {
         fprintf(stderr, "Error al inicializar la barrera\n");
-        return EXIT_FAILURE;
+        return 1;
     }
 
-    pthread_t *threads = malloc(sizeof(pthread_t) * N);
-    thread_arg_t *args = malloc(sizeof(thread_arg_t) * N);
-    if (!threads || !args) {
-        fprintf(stderr, "Error de memoria\n");
+    pthread_t *threads = malloc(N * sizeof(pthread_t));
+    thread_arg_t *args = malloc(N * sizeof(thread_arg_t));
+    if (threads == NULL || args == NULL) {
+        perror("malloc");
         barrier_destroy(&barrera);
         free(threads);
         free(args);
-        return EXIT_FAILURE;
+        return 1;
     }
     for (int i = 0; i < N; i++) {
         args[i].id = i;
         args[i].etapas = E;
         args[i].barrera = &barrera;
 
-        if (pthread_create(&threads[i], NULL, worker, &args[i]) != 0) {
-            fprintf(stderr, "Error al crear la hebra %d\n", i);
+        int rc = pthread_create(&threads[i], NULL, worker, &args[i]);
+        if (rc != 0) {
+            fprintf(stderr, "Error al crear la hebra %d (codigo %d)\n", i, rc);
         }
     }
 
