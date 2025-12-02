@@ -15,4 +15,4 @@ int barrier_init(barrier_t *b, int N);
 void barrier_wait(barrier_t *b);
 void barrier_destroy(barrier_t *b);
 
-#endif // BARRIER_H
+#endif 
